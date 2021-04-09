@@ -46,9 +46,6 @@ bool JsonSignalingClient::open()
             this->onMessageFromSvr(buf.rd_ptr(), buf.size());
         }
     });
-    _thread_scope->post([this]{
-        net_loop();
-    });
 
     using std::placeholders::_1;
     using std::placeholders::_2;
@@ -57,14 +54,6 @@ bool JsonSignalingClient::open()
     _signaling->listenResponse(std::bind(&JsonSignalingClient::onStreamEndpointResponse, this, _1, _2));
 
     return true;
-}
-
-void JsonSignalingClient::net_loop()
-{
-    _evt_queue.process();
-    _thread_scope->post([this]{
-        net_loop();
-    });
 }
 
 
