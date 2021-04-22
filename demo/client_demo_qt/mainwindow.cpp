@@ -142,13 +142,22 @@ void MainWindow::on_btnConnectToSvr_clicked()
     if(_signal_client != nullptr){
         _signal_client->close();
     }
-    _signal_client.reset(new rtcgw::JsonSignalingClient(this, str_svr.toStdString(), str_port.toUInt(), &_evt_queue, _signal_thread.get()) );
+    _signal_client.reset(new rtcgw::JsonSignalingClient(this,
+                         str_svr.toStdString(), str_port.toUInt(),
+                         &_evt_queue, _signal_thread.get())
+    );
     _signal_client->open();
-    _signal_client->signIn("A");
+    _signal_client->signIn("A" /*,[this](int error){
+                       if(error == NO_ERROR ){
+                       }
+                       else{
+                       }
+
+     }*/);
 
     _video_dev = new VideoCapture( {"VP9"} );
-                _video_dev->setRender(_local_render);
-                _video_dev->open(_video_dev_name);
+    _video_dev->setRender(_local_render);
+    _video_dev->open(_video_dev_name);
 
 }
 

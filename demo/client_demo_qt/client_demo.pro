@@ -21,12 +21,6 @@ INCLUDEPATH += /home/arsee/libs/webrtc/third_party/libyuv/include/
 INCLUDEPATH += ../../
 INCLUDEPATH += /home/arsee/gits
 
-
-
-
-LIBS += -L/home/arsee/libs/webrtc/lib
-LIBS += -L/home/arsee/libs/webrtc/base/third_party/libevent/lib
-LIBS += -L/home/arsee/libs/webrtc/third_party/jsoncpp
 LIBS += -L../../lib
 
 LIBS += -lrtcw
@@ -36,8 +30,8 @@ LIBS += -labsl_bad_optional_access
 LIBS += -labsl_throw_delegate
 LIBS += -labsl_bad_variant_access
 LIBS += -lpthread
-LIBS += -ljsoncpp
-LIBS += -levent
+LIBS += -lboost_json
+#LIBS += -levent
 LIBS += -lssl
 LIBS += -lsrtp2
 

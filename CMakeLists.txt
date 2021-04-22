@@ -8,10 +8,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 set(CMAKE_CXX_FLAGS " -fPIC -g ${CMAKE_CXX_FLAGS}")
 
+
 add_definitions(-D WEBRTC_POSIX)
 add_definitions(-D WEBRTC_USE_EPOLL)
 add_definitions(-D WEBRTC_LINUX)
-add_definitions(-D WEBRTC_EXTERNAL_JSON)
 
 include_directories(webrtc_deps/)
 include_directories(webrtc_deps/webrtc)

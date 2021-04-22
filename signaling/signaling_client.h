@@ -18,7 +18,7 @@ public:
     virtual std::string createDialog()=0;
     virtual void joinDialog(const std::string &dialog_id)=0;
     virtual void inviteToDialog(const std::string &dialog_id)=0;
-    virtual void onInvitedToDailog(const OfferParams& parmas)=0;
+    virtual void onInvitedToDailog(const OfferCmd& parmas)=0;
     virtual void leaveDialog()=0;
 
 protected:

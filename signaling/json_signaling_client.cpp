@@ -3,8 +3,8 @@
 #include "session/stream.h"
 
 ///webrtc includes
-#include <third_party/jsoncpp/json.h>
-#include <rtc_base/strings/json.h>
+//#include <third_party/jsoncpp/json.h>
+//#include <rtc_base/strings/json.h>
 #include <pc/session_description.h>
 #include <rtc_base/message_digest.h>
 #include <api/jsep.h>
@@ -27,6 +27,17 @@ JsonSignalingClient::JsonSignalingClient(Signaling* s, const std::string &server
     ,_connector(_evt_queue, 0)
     ,_thread_scope(thr)
 {
+    using std::placeholders::_1;
+    _parser.setDispatcher(
+        CmdDispatcher<AnswerCmd>{std::bind(&JsonSignalingClient::onRecvAnswer, this, _1)}
+    );
+    _parser.setDispatcher(
+        CmdDispatcher<CandidateCmd>{std::bind(&JsonSignalingClient::onRecvCandidate, this, _1)}
+    );
+    _parser.setDispatcher(
+        CmdDispatcher<SiginOKCmd>{std::bind(&JsonSignalingClient::onSignedIn, this, _1)}
+    );
+
 
 }
 
@@ -56,11 +67,6 @@ bool JsonSignalingClient::open()
     return true;
 }
 
-
-void JsonSignalingClient::onSignedIn()
-{
-    cout<<"Login to signaling server successfully."<<endl;
-}
 
 StreamInfo ConverContentInfoToStreamParams(const cricket::ContentInfo& info)
 {
@@ -263,27 +269,25 @@ void JsonSignalingClient::onCreateSessionResponse(int error, const StreamInfos& 
 {
     std::string answer = streamInfoToSdp(sinfos, tinfos);
     if( !answer.empty()){
-        AnswerParams params;
-        params.from = _myname;
-        params.to = _peer_name;
-        params.sdp = answer;
-        SignalingMsg msg("answer", params.serialize());
-        uint8_t buf[20480];
-        int size =20480;
-        size =_streamer.serialize(msg, buf, size);
-        sendMessage(buf, size);
+        AnswerCmd cmd;
+        cmd.from = _myname;
+        cmd.to = _peer_name;
+        cmd.sdp = answer;
+        auto e = cmd.encoder();
+        sendMessage(e->buf(), e->size());
     }
 }
 
 void JsonSignalingClient::onStreamEndpointResponse(const std::string& stream_id, const EndpointInfo& ep)
 {
     //std::string candidate = streamEndpointToSdp(stream_id, ep);
-    CandidateParams params{_myname, _peer_name, stream_id, ep.specify_info};
-    SignalingMsg msg("candidate", params.serialize());
-    uint8_t buf[20480];
-    int size =20480;
-    size=_streamer.serialize(msg, buf, size);
-    sendMessage(buf, size);
+    CandidateCmd cmd;
+    cmd.from = _myname;
+    cmd.to = _peer_name;
+    cmd.mid = stream_id;
+    cmd.candidate = ep.specify_info;
+    auto e = cmd.encoder();
+    sendMessage(e->buf(), e->size());
 }
 
 void JsonSignalingClient::sendMessage(const void* buf, int size)
@@ -296,6 +300,12 @@ void JsonSignalingClient::sendMessage(const void* buf, int size)
     }
 }
 
+std::string newTransactionId()
+{
+    static int id=0;
+    return std::to_string(id++);
+}
+
 void JsonSignalingClient::close()
 {
 }
@@ -304,12 +314,10 @@ void JsonSignalingClient::signIn(const string &user)
 {
     //TODO: post to signal thread scope
     _myname = user;
-    SiginParams params{user, "123456", "rtcgate"};
-    SignalingMsg msg("sigin", params.serialize());
-    uint8_t buf[20480];
-    int size =20480;
-    size=_streamer.serialize(msg, buf, size);
-    sendMessage(buf, size);
+    SiginCmd cmd(user, "123456", "rtcgate");
+    cmd.id = newTransactionId();
+    auto e = cmd.encoder();
+    sendMessage(e->buf(), e->size());
 }
 
 void JsonSignalingClient::signOut()
@@ -336,15 +344,15 @@ void rtcgw::JsonSignalingClient::inviteToDialog(const std::__cxx11::string &dial
 
 }
 
-void JsonSignalingClient::onInvitedToDailog(const OfferParams& params)
+void JsonSignalingClient::onInvitedToDailog(const OfferCmd& cmd)
 {
-    _peer_name = params.from;
-    std::string sid = params.from;
-    bool isok = _signaling->onCreateSession(params.dialog_id, sid);
+    _peer_name = cmd.from;
+    std::string sid = cmd.from;
+    bool isok = _signaling->onCreateSession(cmd.dialog_id, sid);
     if(isok){
         StreamInfos sinfos;
         TransportInfos tinfos;
-        std::tie(sinfos, tinfos) = pasreSdp(params.sdp);
+        std::tie(sinfos, tinfos) = pasreSdp(cmd.sdp);
         StreamInfos local_sinfos;
         for(auto i : sinfos){
             StreamInfo f = i;
@@ -364,55 +372,46 @@ void JsonSignalingClient::leaveDialog()
 void JsonSignalingClient::onMessageFromSvr(const uint8_t *msg, int size)
 {
     cout<<__FUNCTION__<<"(size="<<size<<")"<<endl;
-    ResponseMsg rmsg;
-    SignalingMsg smsg;
-    _streamer.append(msg, size);
-    while(true){
-        if( !_streamer.parse(smsg, rmsg) ){
-            break;
-        }
-        if( !smsg.is_valid()){
-            onSignedIn();
-        }
-        else{
-            if(smsg.action() == "offer"){
-                OfferParams params;
-                OfferParams::parse(smsg.params(), params);
-                onInvitedToDailog(params);
-            }
-            else if(smsg.action() == "answer"){
-                AnswerParams params;
-                AnswerParams::parse(smsg.params(), params);
-                onRecvAnswer(params);
-            }
-            else if(smsg.action() == "candidate"){
-                CandidateParams params;
-                CandidateParams::parse(smsg.params(), params);
-                onRecvCandidate(params);
-            }
-        }
+    cmd_ptr req = _parser.parse((const char*)msg, size);
+    cmd_ptr rsp = req->dispatch(this);
+    if(rsp != nullptr){
+        auto cmde = rsp->encoder();
+        sendMessage(cmde->buf(), cmde->size());
     }
 }
 
-void JsonSignalingClient::onRecvAnswer(const AnswerParams& params)
+cmd_ptr JsonSignalingClient::onSignedIn(Command* req)
 {
+    cout<<"Login to signaling server successfully."<<endl;
+    return nullptr;
+}
+
+cmd_ptr JsonSignalingClient::onRecvAnswer(Command* req)
+{
+    AnswerCmd* cmd = static_cast<AnswerCmd*>(req);
     if(_signaling != nullptr){
         StreamInfos sinfos;
         TransportInfos tinfos;
-        std::tie(sinfos, tinfos) = pasreSdp(params.sdp);
-        _signaling->onSetRemoteStream(params.from, sinfos);
+        std::tie(sinfos, tinfos) = pasreSdp(cmd->sdp);
+        _signaling->onSetRemoteStream(cmd->from, sinfos);
     }
+
+    return nullptr;
 }
 
-void JsonSignalingClient::onRecvCandidate(const CandidateParams& params)
+cmd_ptr JsonSignalingClient::onRecvCandidate(Command *req)
 {
-    std::string sid = params.from;
+    CandidateCmd* cmd = static_cast<CandidateCmd*>(req);
+
+    std::string sid = cmd->from;
     if(_signaling != nullptr){
           EndpointInfo cinfo;
           cinfo.type = EndpintType::CONN_ICE;
-          cinfo.specify_info = params.candidate;
-          _signaling->onRemoteStreamEndpoint(sid, params.mid, cinfo);
+          cinfo.specify_info = cmd->candidate;
+          _signaling->onRemoteStreamEndpoint(sid, cmd->mid, cinfo);
     }
+
+    return nullptr;
 }
 
 

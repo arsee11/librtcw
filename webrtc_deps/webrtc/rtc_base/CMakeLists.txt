@@ -64,7 +64,7 @@ set(BASE_SRCS
     rate_limiter.cc
     third_party/base64/base64.cc
     string_utils.cc
-    strings/json.cc
+    #strings/json.cc
     rtc_certificate_generator.cc
     platform_thread.cc
     signal_thread.cc

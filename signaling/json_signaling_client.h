@@ -38,7 +38,7 @@ public:
     std::string createDialog()override;
     void joinDialog(const string &dialog_id)override;
     void inviteToDialog(const string &dialog_id)override;
-    void onInvitedToDailog(const OfferParams &params)override;
+    void onInvitedToDailog(const OfferCmd &cmd)override;
     void leaveDialog()override;
 
 private:
@@ -47,10 +47,9 @@ private:
     NetEventQueue* _evt_queue;
     Connector _connector;
     ConnectionPtr _conn;
-
+    CommandParser _parser;
     int _peer_id=0;
     ThreadScopePolling* _thread_scope;
-    Streamer _streamer;
     std::string _myname;
     std::string _peer_name;
 
@@ -60,9 +59,10 @@ protected:
     void onStreamEndpointResponse(const std::string &stream_id, const EndpointInfo &ep);
     void sendMessage(const void *buf, int size);
     void onMessageFromSvr(const uint8_t *msg, int size);
-    void onRecvAnswer(const AnswerParams &params);
-    void onRecvCandidate(const CandidateParams &params);
-    void onSignedIn();
+    cmd_ptr onRecvAnswer(Command *req);
+    cmd_ptr onRecvCandidate(Command *req);
+    cmd_ptr onSignedIn(Command* req);
+
 
 };
 
