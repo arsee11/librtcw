@@ -96,6 +96,7 @@ set(SRCS
  modules/video_coding/encoded_frame.cc
  modules/video_coding/include/video_codec_interface.cc
  modules/remote_bitrate_estimator/test/bwe_test_logging.cc
+ modules/remote_bitrate_estimator/remote_estimator_proxy.cc
 
  modules/rtp_rtcp/include/report_block_data.cc
  modules/rtp_rtcp/include/rtp_rtcp_defines.cc

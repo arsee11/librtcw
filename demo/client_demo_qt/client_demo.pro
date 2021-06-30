@@ -16,8 +16,9 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 DEFINES += WEBRTC_POSIX WEBRTC_LINUX WEBRTC_USE_EPOLL WEBRTC_EXTERNAL_JSON
 
-INCLUDEPATH += /home/arsee/libs/webrtc
-INCLUDEPATH += /home/arsee/libs/webrtc/third_party/libyuv/include/
+INCLUDEPATH += ../../webrtc_deps/webrtc
+INCLUDEPATH += ../../webrtc_deps/absl_inl
+INCLUDEPATH += ../../third_party/libyuv/include/
 INCLUDEPATH += ../../
 INCLUDEPATH += /home/arsee/gits
 
@@ -25,13 +26,8 @@ LIBS += -L../../lib
 
 LIBS += -lrtcw
 LIBS += -lwebrtc_deps
-LIBS += -labsl_strings
-LIBS += -labsl_bad_optional_access
-LIBS += -labsl_throw_delegate
-LIBS += -labsl_bad_variant_access
 LIBS += -lpthread
 LIBS += -lboost_json
-#LIBS += -levent
 LIBS += -lssl
 LIBS += -lsrtp2
 

@@ -3,6 +3,7 @@
 #include "source.h"
 #include "observer.h"
 #include <algorithm>
+#include <assert.h>
 
 namespace rtcgw
 {
