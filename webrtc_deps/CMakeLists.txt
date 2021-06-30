@@ -9,6 +9,7 @@ set(SRCS
 pc/jsep_session_description.cc
 pc/webrtc_sdp.cc
 pc/media_session.cc
+absl_inl/absl/strings/ascii.cc
 )
 
 add_library(${PROJECT_NAME} SHARED ${SRCS})

@@ -128,6 +128,7 @@ modules/include/module_common_types_public.*
 modules/include/module.*
 modules/remote_bitrate_estimator/include/bwe_defines.*
 modules/remote_bitrate_estimator/include/remote_bitrate_estimator.*
+modules/remote_bitrate_estimator/source/remote_estimator_proxy.*
 modules/remote_bitrate_estimator/test/bwe_test_logging.*
 modules/rtp_rtcp/include/flexfec_receiver.*
 modules/rtp_rtcp/include/ulpfec_receiver.*

@@ -338,7 +338,7 @@ void JsonSignalingClient::joinDialog(const std::string& dialog_id)
 
 }
 
-void rtcgw::JsonSignalingClient::inviteToDialog(const std::__cxx11::string &dialog_id)
+void rtcgw::JsonSignalingClient::inviteToDialog(const std::string &dialog_id)
 {
     //TODO: post to signal thread scope
 
