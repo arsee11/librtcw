@@ -1,70 +1,17 @@
-#include "http_signaling_client.h"
-#include "signaling.h"
+///sdp_info.cpp
+
+#include "sdp_info.h"
 
 ///webrtc includes
-#include <third_party/jsoncpp/json.h>
-#include <rtc_base/strings/json.h>
 #include <pc/session_description.h>
 #include <rtc_base/message_digest.h>
 #include <api/jsep.h>
 #include <api/jsep_session_description.h>
-#include <rtc_base/rtc_certificate_generator.h>
-#include <rtc_base/thread.h>
-
-
-#include <iostream>
-using namespace  std;
 
 namespace rtcgw {
 
 
-HttpSignalingClient::HttpSignalingClient(Signaling* s, const std::string &server_ip, uint16_t server_port)
-    :SignalingClient(s)
-    ,_server_ip(server_ip)
-    ,_server_port(server_port)
-{
-
-}
-
-HttpSignalingClient::~HttpSignalingClient()
-{
-
-}
-
-bool HttpSignalingClient::open()
-{
-    using std::placeholders::_1;
-    using std::placeholders::_2;
-    using std::placeholders::_3;
-    _signaling->listenResponse(std::bind(&HttpSignalingClient::onCreateSessionResponse, this, _1, _2, _3));
-    _signaling->listenResponse(std::bind(&HttpSignalingClient::onStreamEndpointResponse, this, _1, _2));
-
-    return true;
-}
-
-
-
-void HttpSignalingClient::OnSignedIn()
-{
-    cout<<"Login to signaling server successfully."<<endl;
-}
-
-void HttpSignalingClient::OnDisconnected()
-{
-    cout<<"Disconnected from signaling server."<<endl;
-}
-
-void HttpSignalingClient::OnPeerConnected(int id, const std::string &name)
-{
-    cout<<"Peer name:"<<name<<endl;
-}
-
-void HttpSignalingClient::OnPeerDisconnected(int peer_id)
-{
-
-}
-
-StreamInfo ConverContentInfoToStreamParams(const cricket::ContentInfo& info)
+static StreamInfo ConverContentInfoToStreamParams(const cricket::ContentInfo& info)
 {
     StreamInfo sinfo;
     switch (info.media_description()->type()) {
@@ -81,6 +28,8 @@ StreamInfo ConverContentInfoToStreamParams(const cricket::ContentInfo& info)
         sinfo.stream_type = -1;
     }
     sinfo.is_rtcpmux = info.media_description()->rtcp_mux();
+    sinfo.is_rtcp_reduced_size = info.media_description()->rtcp_reduced_size();
+    sinfo.direction = (StreamDirection)info.media_description()->direction();
     for( auto streams : info.media_description()->streams()){
         for(auto ssrc : streams.ssrcs){
             sinfo.ssrcs.insert(ssrc) ;
@@ -89,7 +38,7 @@ StreamInfo ConverContentInfoToStreamParams(const cricket::ContentInfo& info)
     if(sinfo.stream_type == STREAM_VIDEO){
         const cricket::VideoContentDescription* vcodec = info.media_description()->as_video();
         for(auto codec : vcodec->codecs()){
-            CodecParams cparam{codec.name, codec.id, CodecType::CODEC_VIDEO,{}};
+            CodecParams cparam{codec.name, codec.id, CodecType::CODEC_VIDEO,{},{}};
             for(auto fbparam : codec.feedback_params.params()){
                 cparam.feedback_params.push_back(rtcgw::FeedbackParam{fbparam.id(), fbparam.param()});
             }
@@ -102,7 +51,7 @@ StreamInfo ConverContentInfoToStreamParams(const cricket::ContentInfo& info)
     if(sinfo.stream_type == STREAM_AUDIO){
         const cricket::AudioContentDescription* acodec = info.media_description()->as_audio();
         for(auto codec : acodec->codecs()){
-            CodecParams cparam{codec.name, codec.id, CodecType::CODEC_AUDIO,{}};
+            CodecParams cparam{codec.name, codec.id, CodecType::CODEC_AUDIO,{},{}};
             for(auto fbparam : codec.feedback_params.params()){
                 cparam.feedback_params.push_back(rtcgw::FeedbackParam{fbparam.id(), fbparam.param()});
             }
@@ -114,20 +63,18 @@ StreamInfo ConverContentInfoToStreamParams(const cricket::ContentInfo& info)
     return sinfo;
 }
 
-TransportInfo ConverContentInfoToTransportParams(const cricket::ContentInfo& info)
+static TransportInfo ConverContentInfoToTransportParams(const cricket::ContentInfo& info)
 {
     TransportInfo tinfo;
     tinfo.is_media = info.media_description()->type()==cricket::MediaType::MEDIA_TYPE_DATA ? false :true;
     tinfo.is_rtcp_mux = info.media_description()->rtcp_mux();
     tinfo.mid = info.mid();
 
+    //use dtls-srtp transport
     if(info.media_description()->cryptos().size() == 0){
-        int64_t expires_ms= 24*60*60*1000; //1 day
-        rtc::scoped_refptr<rtc::RTCCertificate> cert =
-                rtc::RTCCertificateGenerator::GenerateCertificate(rtc::KeyParams(rtc::KeyType::KT_RSA), expires_ms);
-        tinfo.certificate = cert.release();
-
+        tinfo.policy = DTLS_SRTP;
     }
+    //use srtp transport
     else{
         for(auto c : info.media_description()->cryptos()){
             CryptoInfo ci;
@@ -137,12 +84,13 @@ TransportInfo ConverContentInfoToTransportParams(const cricket::ContentInfo& inf
             ci.session_params = c.session_params;
             tinfo.cryptos.push_back(ci);
         }
+        tinfo.policy = SRTP;
     }
 
     return tinfo;
 }
 
-std::tuple<StreamInfos, TransportInfos> pasreSdp(const std::string& sdp)
+static std::tuple<StreamInfos, TransportInfos> parseSdp(const std::string& sdp)
 {
     StreamInfos sinfos;
     TransportInfos tinfos;
@@ -165,8 +113,7 @@ std::tuple<StreamInfos, TransportInfos> pasreSdp(const std::string& sdp)
 
         TransportInfo tinfo = ConverContentInfoToTransportParams(content);
         tinfo.ice_role = cricket::ICEROLE_CONTROLLED;
-        tinfo.policy = DTLS_SRTP;
-        tinfo.is_ice = true;
+        tinfo.type = TransportType::ICE;
         tinfo.local_ice_ufrag = rtc::CreateRandomString(cricket::ICE_UFRAG_LENGTH);
         tinfo.local_ice_pwd = rtc::CreateRandomString(cricket::ICE_PWD_LENGTH);
         tinfo.remote_ice_ufrag = desc->transport_infos()[i].description.ice_ufrag;
@@ -177,80 +124,6 @@ std::tuple<StreamInfos, TransportInfos> pasreSdp(const std::string& sdp)
     }
 
     return std::make_tuple(sinfos, tinfos);
-}
-
-void HttpSignalingClient::OnMessageFromPeer(int peer_id, const std::string &message)
-{
-    _peer_id = peer_id;
-    std::string sid = std::to_string(_peer_id);
-
-    Json::Reader reader;
-    Json::Value jmessage;
-    if (!reader.parse(message, jmessage)) {
-      cout << "Received unknown message. " << message<<endl;
-      return;
-    }
-    std::string type_str;
-    std::string json_object;
-
-    rtc::GetStringFromJsonObject(jmessage, "type", &type_str);
-    if (!type_str.empty()) {
-        if (type_str == "offer-loopback") {
-            return;
-        }
-
-        std::string sdp;
-        if (!rtc::GetStringFromJsonObject(jmessage, "sdp", &sdp)) {
-            cout << "Can't parse received session description message."<<endl;
-            return;
-        }
-
-        if(_signaling != nullptr){
-            //_signaling->onAddStream(sid, 0, params);
-            if(type_str == "offer"){
-                bool isok = _signaling->onCreateSession("", sid);
-                if(isok){
-                    StreamInfos sinfos;
-                    TransportInfos tinfos;
-                    std::tie(sinfos, tinfos) = pasreSdp(sdp);
-                    StreamInfos local_sinfos;
-                    for(auto i : sinfos){
-                        StreamInfo f = i;
-                        local_sinfos.push_back(f);
-                    }
-                    _signaling->onAddStream(sid, local_sinfos, tinfos);
-                    _signaling->onSetRemoteStream(sid, sinfos);
-                }
-            }
-            else{
-                StreamInfos sinfos;
-                TransportInfos tinfos;
-                std::tie(sinfos, tinfos) = pasreSdp(sdp);
-                _signaling->onSetRemoteStream(sid, sinfos);
-            }
-        }
-
-    }
-    else {
-      std::string sdp_mid;
-      int sdp_mlineindex = 0;
-      std::string sdp;
-      if (!rtc::GetStringFromJsonObject(jmessage, "sdpMid", &sdp_mid) ||
-          !rtc::GetIntFromJsonObject(jmessage, "sdpMLineIndex", &sdp_mlineindex) ||
-          !rtc::GetStringFromJsonObject(jmessage, "candidate", &sdp))
-      {
-        cout << "Can't parse received message."<<endl;
-        return;
-      }
-
-      if(_signaling != nullptr){
-            EndpointInfo cinfo;
-            cinfo.type = EndpintType::CONN_ICE;
-            cinfo.specify_info = sdp;
-            _signaling->onRemoteStreamEndpoint(sid, sdp_mid, cinfo);
-      }
-
-    }
 }
 
 std::string streamInfoToSdp(const StreamInfos& sinfos, const TransportInfos& tinfos)
@@ -302,6 +175,7 @@ std::string streamInfoToSdp(const StreamInfos& sinfos, const TransportInfos& tin
             cricket::RtpHeaderExtensions rhext;
             content->set_rtp_header_extensions(rhext);
             content->set_rtcp_mux(sinfo.is_rtcpmux);
+            content->set_rtcp_reduced_size(sinfo.is_rtcp_reduced_size);
             content->set_rtcp_reduced_size(false);
             content->set_remote_estimate(false);
             cricket::CryptoParams crypto;
@@ -318,8 +192,8 @@ std::string streamInfoToSdp(const StreamInfos& sinfos, const TransportInfos& tin
         trans_info.description.ice_pwd = tinfo.local_ice_pwd;
         trans_info.content_name = tinfo.mid;
         trans_info.description.transport_options.push_back("trickle");
-        trans_info.description.identity_fingerprint =
-                rtc::SSLFingerprint::CreateFromCertificate(*static_cast<rtc::RTCCertificate*>(tinfo.certificate));
+        trans_info.description.identity_fingerprint;
+                rtc::SSLFingerprint::CreateFromRfc4572(tinfo.fingerprint_alg, tinfo.fingerprint);
         sdesc->AddTransportInfo(trans_info);
 
     }
@@ -332,85 +206,17 @@ std::string streamInfoToSdp(const StreamInfos& sinfos, const TransportInfos& tin
     return sdp;
 }
 
-void HttpSignalingClient::onCreateSessionResponse(int error, const StreamInfos& sinfos, const TransportInfos& tinfos)
+MediaInfo parseSdp2MeidaInfo(const std::string &sdpstr)
 {
-    std::string answer = streamInfoToSdp(sinfos, tinfos);
-    if( !answer.empty()){
-        std::string str ="{\"sdp\":\"";
-                    str+=answer+"\",";
-                    str+="\"type\":\"answer\"";
-                    str+="}";
-        SendMessage(str);
-    }
+    MediaInfo minfo;
+    std::tie(minfo.sinfos, minfo.tinfos) = parseSdp(sdpstr);
+    return minfo;
 }
 
-std::string streamEndpointToSdp(const std::string& stream_id, const EndpointInfo& ep)
+std::string convertMeidaInfo2Sdp(const MediaInfo &minfo)
 {
-//"{ "candidate" : "candidate:3030871937 1 udp 2122262783 2001:470:4f05:152b:193b:a2d3:6627:16b1 45656 typ host generation 0 ufrag 8IMo network-id 2 network-cost 50",   "sdpMLineIndex" : 0,   "sdpMid" : "0"}"
-    std::string str ="{\"candidata\":\"";
-                str+=ep.specify_info+"\",";
-                str+="\"sdpMLineIndex\":\""+stream_id+"\",";
-                str+="\"sdpMid\":\""+stream_id+"\"";
-                str+="}";
-
-    return str;
+    return streamInfoToSdp(minfo.sinfos, minfo.tinfos);
 }
 
-void HttpSignalingClient::onStreamEndpointResponse(const std::string& stream_id, const EndpointInfo& ep)
-{
-    std::string candidate = streamEndpointToSdp(stream_id, ep);
-    if( !candidate.empty()){
-       SendMessage(candidate);
-    }
-}
+}//rtcw
 
-void HttpSignalingClient::OnMessageSent(int err)
-{
-    if(_pending_messages.empty())
-        return;
-}
-
-void HttpSignalingClient::OnServerConnectionFailure()
-{
-
-}
-
-void HttpSignalingClient::SendMessage(const std::string& json_object) {
-
-}
-
-void HttpSignalingClient::close()
-{
-}
-
-void HttpSignalingClient::run()
-{
-
-}
-
-void HttpSignalingClient::signIn()
-{
-}
-
-void HttpSignalingClient::signOut()
-{
-}
-
-string HttpSignalingClient::createDialog()
-{
-
-}
-
-void HttpSignalingClient::joinDialog(const string &dialog_id)
-{
-
-}
-
-
-
-void HttpSignalingClient::leaveDialog()
-{
-
-}
-
-}//rtcgw

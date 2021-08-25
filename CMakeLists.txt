@@ -23,26 +23,28 @@ include_directories(../)
 
 
 add_subdirectory(webrtc_deps/)
-add_subdirectory(rtputils/)
-add_subdirectory(signaling/)
-add_subdirectory(session/)
-add_subdirectory(transport/)
+#add_subdirectory(rtputils/)
+#add_subdirectory(signaling/)
+#add_subdirectory(session/)
+#add_subdirectory(transport/)
 
 
 add_library(rtcw SHARED
     librtcw_global.h
-    timer.cpp
-    time_clocks.cpp
-    source.cpp
+    #timer.cpp
+    #time_clocks.cpp
+    #source.cpp
+    media_def.cpp
     media_frame.cpp
+    sdp_info.cpp
 )
 
 target_link_libraries(rtcw
     -Wl,--whole-archive
-    rtcsignaling
-    rtcsession
-    rtctransport
-    rtcrtputils
+    #rtcsignaling
+    #rtcsession
+    #rtctransport
+    #rtcrtputils
     -Wl,--no-whole-archive
 )
 
