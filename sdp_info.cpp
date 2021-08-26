@@ -118,8 +118,10 @@ static std::tuple<StreamInfos, TransportInfos> parseSdp(const std::string& sdp)
         tinfo.local_ice_pwd = rtc::CreateRandomString(cricket::ICE_PWD_LENGTH);
         tinfo.remote_ice_ufrag = desc->transport_infos()[i].description.ice_ufrag;
         tinfo.remote_ice_pwd = desc->transport_infos()[i].description.ice_pwd;
-        tinfo.fingerprint_alg = desc->transport_infos()[i].description.identity_fingerprint->algorithm;
-        tinfo.fingerprint = desc->transport_infos()[i].description.identity_fingerprint->GetRfc4572Fingerprint();
+        if(desc->transport_infos()[i].description.identity_fingerprint != nullptr){
+            tinfo.fingerprint_alg = desc->transport_infos()[i].description.identity_fingerprint->algorithm;
+            tinfo.fingerprint = desc->transport_infos()[i].description.identity_fingerprint->GetRfc4572Fingerprint();
+        }
         tinfos.push_back(tinfo);
     }
 
@@ -135,11 +137,18 @@ std::string streamInfoToSdp(const StreamInfos& sinfos, const TransportInfos& tin
 
     for(size_t i=0; i<sinfos.size(); i++){
         StreamInfo sinfo = sinfos[i];
+        std::string protocol="UDP/TLS/RTP/SAVPF";
+        if(tinfos[i].policy == TransportPolicy::SRTP){
+            protocol = "RTP/SAVPF";
+        }
+        else if(tinfos[i].policy == TransportPolicy::UNENCRYPTED){
+            protocol = "RTP/AVPF";
+        }
         std::unique_ptr<cricket::MediaContentDescription> content;
         if(sinfo.stream_type == STREAM_AUDIO){
             auto audioc = new cricket::AudioContentDescription();
             content.reset(audioc);
-            audioc->set_protocol("UDP/TLS/RTP/SAVPF");
+            audioc->set_protocol(protocol);
 
             for(auto cp: sinfo.codecs){
                 cricket::AudioCodec c;
@@ -156,7 +165,7 @@ std::string streamInfoToSdp(const StreamInfos& sinfos, const TransportInfos& tin
         else if(sinfo.stream_type == STREAM_VIDEO){
             auto videoc = new cricket::VideoContentDescription();
             content.reset(videoc);
-            videoc->set_protocol("UDP/TLS/RTP/SAVPF");
+            videoc->set_protocol(protocol);
             for(auto cp: sinfo.codecs){
                 cricket::VideoCodec c;
                 c.id = cp.payload_type;
@@ -178,8 +187,10 @@ std::string streamInfoToSdp(const StreamInfos& sinfos, const TransportInfos& tin
             content->set_rtcp_reduced_size(sinfo.is_rtcp_reduced_size);
             content->set_rtcp_reduced_size(false);
             content->set_remote_estimate(false);
-            cricket::CryptoParams crypto;
-            content->AddCrypto(crypto);
+            if(tinfos[i].policy == TransportPolicy::SRTP){
+                cricket::CryptoParams crypto;
+                content->AddCrypto(crypto);
+            }
             content->set_direction((webrtc::RtpTransceiverDirection)sinfo.direction);
             sdesc->AddContent(sinfo.id
                              ,cricket::MediaProtocolType::kRtp
