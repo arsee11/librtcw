@@ -70,12 +70,7 @@ static TransportInfo ConverContentInfoToTransportParams(const cricket::ContentIn
     tinfo.is_rtcp_mux = info.media_description()->rtcp_mux();
     tinfo.mid = info.mid();
 
-    //use dtls-srtp transport
-    if(info.media_description()->cryptos().size() == 0){
-        tinfo.policy = DTLS_SRTP;
-    }
-    //use srtp transport
-    else{
+    if(info.media_description()->cryptos().size() > 0){
         for(auto c : info.media_description()->cryptos()){
             CryptoInfo ci;
             ci.tag = c.tag;
@@ -84,7 +79,7 @@ static TransportInfo ConverContentInfoToTransportParams(const cricket::ContentIn
             ci.session_params = c.session_params;
             tinfo.cryptos.push_back(ci);
         }
-        tinfo.policy = SRTP;
+        tinfo.policy = TransportPolicy::SRTP;
     }
 
     return tinfo;
@@ -121,7 +116,9 @@ static std::tuple<StreamInfos, TransportInfos> parseSdp(const std::string& sdp)
         if(desc->transport_infos()[i].description.identity_fingerprint != nullptr){
             tinfo.fingerprint_alg = desc->transport_infos()[i].description.identity_fingerprint->algorithm;
             tinfo.fingerprint = desc->transport_infos()[i].description.identity_fingerprint->GetRfc4572Fingerprint();
+            tinfo.policy = TransportPolicy::DTLS_SRTP;
         }
+
         tinfos.push_back(tinfo);
     }
 
@@ -160,7 +157,6 @@ std::string streamInfoToSdp(const StreamInfos& sinfos, const TransportInfos& tin
                 c.params = cp.fmtps;
                 audioc->AddCodec(c);
             }
-
         }
         else if(sinfo.stream_type == STREAM_VIDEO){
             auto videoc = new cricket::VideoContentDescription();
@@ -192,6 +188,13 @@ std::string streamInfoToSdp(const StreamInfos& sinfos, const TransportInfos& tin
                 content->AddCrypto(crypto);
             }
             content->set_direction((webrtc::RtpTransceiverDirection)sinfo.direction);
+            cricket::StreamParams sp;
+            for(auto issrc : sinfo.ssrcs){
+                sp.add_ssrc(issrc);
+            }
+            sp.cname = sinfo.cname;
+            sp.id = sinfo.id;
+            content->AddStream(sp);
             sdesc->AddContent(sinfo.id
                              ,cricket::MediaProtocolType::kRtp
                              ,std::move(content));

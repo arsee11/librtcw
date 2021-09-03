@@ -62,6 +62,7 @@ struct StreamInfo
     bool is_rtcpmux=false;
     bool is_rtcp_reduced_size=false;
     std::set<uint32_t> ssrcs;
+    std::string cname;
     std::vector<CodecParams> codecs;
 };
 
