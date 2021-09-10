@@ -18,6 +18,7 @@ public:
             int chns;
         };
     };
+    bool is_key_frame;
     uint64_t timestamp_ms;
     int size;
     void* data;

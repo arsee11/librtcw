@@ -26,6 +26,21 @@ enum CodecType {
   CODEC_AUDIO
 };
 
+enum VideoCodec {
+  VC_UNKNOWN = 0,
+  VC_VP8,
+  VC_VP9,
+  VC_AV1,
+  VC_H264
+};
+
+constexpr char VN_Vp8[] = "VP8";
+constexpr char VN_Vp9[] = "VP9";
+constexpr char VN_Av1[] = "AV1X";
+constexpr char VN_H264[] = "H264";
+constexpr char VN_Generic[] = "Generic";
+constexpr char VN_Multiplex[] = "Multiplex";
+
 struct FeedbackParam {
   std::string id;     // e.g. "nack", "ccm"
   std::string param;  // e.g. "", "rpsi", "fir"
@@ -37,7 +52,7 @@ struct CodecParams
 {
     std::string name;
     int payload_type;
-    int codec_type;
+    CodecType codec_type;
     CodecParameterMap fmtps;
     std::vector<FeedbackParam> feedback_params;
 };

@@ -1,53 +1,67 @@
 #include "rtp_demuxer.h"
 
 #include <modules/rtp_rtcp/source/video_rtp_depacketizer.h>
+#include <modules/rtp_rtcp/source/create_video_rtp_depacketizer.h>
+#include <api/video_codecs/video_codec.h>
 #include <absl/types/optional.h>
 
 namespace rtcgw {
 
-RtpDemuxer::RtpDemuxer()
+class RtpDemuxerImpl : public RtpDemuxer
 {
+public:
+    RtpDemuxerImpl(const std::string& codec_name);
 
+    // RtpDemuxer interface
+public:
+    void put(const RtpPacket& packet)override;
+    MediaFrame get()override;
+
+private:
+    std::string _codec_name;
+    std::unique_ptr<webrtc::VideoRtpDepacketizer> _depacketizer;
+    rtc::CopyOnWriteBuffer _frame;
+};
+
+RtpDemuxerImpl::RtpDemuxerImpl(const std::string &codec_name)
+{
+    _codec_name = codec_name;
+    webrtc::VideoCodecType vt = webrtc::PayloadStringToCodecType(codec_name);
+    _depacketizer = webrtc::CreateVideoRtpDepacketizer(vt);
 }
 
-void RtpDemuxer::put()
-{
-    std::unique_ptr<webrtc::VideoRtpDepacketizer> depacketizer;
-    for( auto it : _local_params.codecs){
-        if(it.payload_type == packet.PayloadType()){
-            webrtc::VideoCodecType vt = webrtc::PayloadStringToCodecType(it.name);
-            depacketizer = webrtc::CreateVideoRtpDepacketizer(vt);
-            break;
-        }
-    }
 
-    if(depacketizer != nullptr){
+
+void RtpDemuxerImpl::put(const webrtc::RtpPacket &packet)
+{
+    if(_depacketizer != nullptr){
         absl::optional<webrtc::VideoRtpDepacketizer::ParsedRtpPayload> parsed_payload =
-                depacketizer->Parse(packet.PayloadBuffer());
+                _depacketizer->Parse(packet.PayloadBuffer());
 
         if (parsed_payload == std::nullopt) {
             //log error
+            _frame.Clear();
             return;
         }
 
-        rtc::CopyOnWriteBuffer payload = parsed_payload->video_payload;
-        webrtc::RTPVideoHeader header = parsed_payload->video_header;
-        memcpy(buffer+buffer_pos, payload.data(), payload.size());
-        buffer_pos += payload.size();
-
-        if(packet.Marker()){
-            //fwrite(buffer, 1, buffer_pos, fp);
-            buffer_pos = 0;
-        }
+        _frame = parsed_payload->video_payload;
+        //webrtc::RTPVideoHeader header = parsed_payload->video_header;
     }
 }
 
-MediaFrame RtpDemuxer::get()
+MediaFrame RtpDemuxerImpl::get()
 {
-
+    MediaFrame frame;
+    frame.data = _frame.data();
+    frame.size = _frame.size();
+    return frame;
 }
 
 
+RtpDemuxer* RtpDemuxer::create(const std::string &codec_name)
+{
+    return new RtpDemuxerImpl(codec_name);
+}
 
 
 }//rtcgw

@@ -38,6 +38,7 @@ add_library(rtcw SHARED
     media_frame.cpp
     sdp_info.cpp
     rtp_demuxer.cpp
+    rtp_muxer.cpp
 )
 
 target_link_libraries(rtcw
