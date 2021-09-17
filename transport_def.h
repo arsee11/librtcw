@@ -80,8 +80,8 @@ struct TransportInfo
     std::string remote_ice_ufrag;
     std::string remote_ice_pwd;
     std::string ice_options;
-    std::string fingerprint_alg;//RFC4572 fingerprint
-    std::string fingerprint;    //RFC4572 fingerprint
+    std::string remote_fingerprint_alg;//RFC4572 fingerprint
+    std::string remote_fingerprint;    //RFC4572 fingerprint
 
 };
 

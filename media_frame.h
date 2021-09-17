@@ -12,6 +12,7 @@ public:
         struct{
             int w;
             int h;
+            int fps;
         };
         struct{
             int sr;

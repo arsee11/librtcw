@@ -108,14 +108,12 @@ static std::tuple<StreamInfos, TransportInfos> parseSdp(const std::string& sdp)
 
         TransportInfo tinfo = ConverContentInfoToTransportParams(content);
         tinfo.ice_role = cricket::ICEROLE_CONTROLLED;
-        tinfo.type = TransportType::ICE;
-        tinfo.local_ice_ufrag = rtc::CreateRandomString(cricket::ICE_UFRAG_LENGTH);
-        tinfo.local_ice_pwd = rtc::CreateRandomString(cricket::ICE_PWD_LENGTH);
+        tinfo.type = TransportType::ICE;       
         tinfo.remote_ice_ufrag = desc->transport_infos()[i].description.ice_ufrag;
         tinfo.remote_ice_pwd = desc->transport_infos()[i].description.ice_pwd;
         if(desc->transport_infos()[i].description.identity_fingerprint != nullptr){
-            tinfo.fingerprint_alg = desc->transport_infos()[i].description.identity_fingerprint->algorithm;
-            tinfo.fingerprint = desc->transport_infos()[i].description.identity_fingerprint->GetRfc4572Fingerprint();
+            tinfo.remote_fingerprint_alg = desc->transport_infos()[i].description.identity_fingerprint->algorithm;
+            tinfo.remote_fingerprint = desc->transport_infos()[i].description.identity_fingerprint->GetRfc4572Fingerprint();
             tinfo.policy = TransportPolicy::DTLS_SRTP;
         }
 
@@ -207,7 +205,7 @@ std::string streamInfoToSdp(const StreamInfos& sinfos, const TransportInfos& tin
         trans_info.content_name = tinfo.mid;
         trans_info.description.transport_options.push_back("trickle");
         trans_info.description.identity_fingerprint;
-                rtc::SSLFingerprint::CreateFromRfc4572(tinfo.fingerprint_alg, tinfo.fingerprint);
+                rtc::SSLFingerprint::CreateFromRfc4572(tinfo.remote_fingerprint_alg, tinfo.remote_fingerprint);
         sdesc->AddTransportInfo(trans_info);
 
     }

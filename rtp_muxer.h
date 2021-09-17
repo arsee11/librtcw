@@ -13,7 +13,7 @@ using webrtc::RtpPacket;
 class RtpMuxer
 {
 public:
-    static RtpMuxer *create(const std::string& codec_name);
+    static RtpMuxer *create(const CodecParams &parmas, uint32_t ssrc);
     RtpMuxer(){}
 
     virtual ~RtpMuxer()=default;
