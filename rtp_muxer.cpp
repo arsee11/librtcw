@@ -83,6 +83,8 @@ std::vector<std::unique_ptr<RtpPacket>> RtpMuxerImpl::get()
         do{
             webrtc::RtpPacketToSend* pack = new webrtc::RtpPacketToSend(&ext);
             ret = _packetizer->NextPacket(pack);
+            if(!ret)
+                break;
             pack->SetPayloadType(_codec_params.payload_type);
             pack->SetSequenceNumber(_seqno++);
             pack->SetTimestamp(_timestamp);
@@ -91,7 +93,7 @@ std::vector<std::unique_ptr<RtpPacket>> RtpMuxerImpl::get()
             if(pack->Marker()){
                 updateTimestamp();
             }
-        }while(ret);
+        }while(true);
     }
     return packs;
 }
