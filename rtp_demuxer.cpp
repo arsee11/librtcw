@@ -5,6 +5,11 @@
 #include <api/video_codecs/video_codec.h>
 #include <absl/types/optional.h>
 
+#include <iostream>
+
+using  std::cout;
+using std::endl;
+
 namespace rtcgw {
 
 class RtpDemuxerImpl : public RtpDemuxer
@@ -43,7 +48,11 @@ void RtpDemuxerImpl::put(const webrtc::RtpPacket &packet)
             _frame.Clear();
             return;
         }
+        if(parsed_payload->video_header.codec = webrtc::VideoCodecType::kVideoCodecVP9){
+            webrtc::RTPVideoHeaderVP9 vp9header = std::get<webrtc::RTPVideoHeaderVP9>(parsed_payload->video_header.video_type_header);
+            cout<<"is end of frame:"<<vp9header.end_of_frame<<endl;
 
+        }
         _frame = parsed_payload->video_payload;
         //webrtc::RTPVideoHeader header = parsed_payload->video_header;
     }
