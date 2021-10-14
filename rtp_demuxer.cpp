@@ -20,12 +20,26 @@ public:
     // RtpDemuxer interface
 public:
     void put(const RtpPacket& packet)override;
-    MediaFrame get()override;
+    std::tuple<uint8_t *, size_t> get()override;
 
 private:
     std::string _codec_name;
     std::unique_ptr<webrtc::VideoRtpDepacketizer> _depacketizer;
-    rtc::CopyOnWriteBuffer _frame;
+    struct FrameBuffer{
+        void clear(){
+            fragments.clear();
+            is_completed = false;
+        }
+        size_t size()const{
+            size_t s = 0;
+            for(auto f : fragments){
+                s += f.size();
+            }
+            return s;
+        }
+        std::vector<rtc::CopyOnWriteBuffer> fragments;
+        bool is_completed=false;
+    } _buffer;
 };
 
 RtpDemuxerImpl::RtpDemuxerImpl(const std::string &codec_name)
@@ -45,25 +59,35 @@ void RtpDemuxerImpl::put(const webrtc::RtpPacket &packet)
 
         if (parsed_payload == std::nullopt) {
             //log error
-            _frame.Clear();
             return;
         }
+        if(_buffer.is_completed){ //it means a new frame is comming
+            _buffer.clear();
+        }
+
+        _buffer.fragments.push_back(parsed_payload->video_payload);
         if(parsed_payload->video_header.codec = webrtc::VideoCodecType::kVideoCodecVP9){
             webrtc::RTPVideoHeaderVP9 vp9header = std::get<webrtc::RTPVideoHeaderVP9>(parsed_payload->video_header.video_type_header);
-            cout<<"is end of frame:"<<vp9header.end_of_frame<<endl;
-
+            //cout<<"is end of frame:"<<vp9header.end_of_frame<<endl;
+            if(vp9header.end_of_frame){
+                _buffer.is_completed = true;
+            }
         }
-        _frame = parsed_payload->video_payload;
-        //webrtc::RTPVideoHeader header = parsed_payload->video_header;
     }
 }
 
-MediaFrame RtpDemuxerImpl::get()
+std::tuple<uint8_t*, size_t> RtpDemuxerImpl::get()
 {
-    MediaFrame frame;
-    frame.data = _frame.data();
-    frame.size = _frame.size();
-    return frame;
+    uint8_t* frame=nullptr;
+    size_t size = 0;
+    if(_buffer.is_completed){
+        frame = new uint8_t[_buffer.size()];
+        for(auto f : _buffer.fragments){
+            memcpy(frame+size, f.data(), f.size());
+            size += f.size();
+        }
+    }
+    return std::make_tuple(frame, size);
 }
 
 

@@ -18,7 +18,7 @@ public:
 
     virtual ~RtpDemuxer()=default;
     virtual void put(const RtpPacket& packet)=0;
-    virtual MediaFrame get()=0;
+    virtual std::tuple<uint8_t *, size_t> get()=0;
 };
 
 }//rtcgw
