@@ -18,6 +18,7 @@ public:
 
     virtual ~RtpDemuxer()=default;
     virtual void put(const RtpPacket& packet)=0;
+    //user must take onwership of the return uint8_t*
     virtual std::tuple<uint8_t *, size_t> get()=0;
 };
 
