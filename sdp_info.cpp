@@ -32,7 +32,7 @@ static StreamInfo ConverContentInfoToStreamParams(const cricket::ContentInfo& in
     sinfo.dinfo.direction = (StreamDirection)info.media_description()->direction();
     for( auto streams : info.media_description()->streams()){
         for(auto ssrc : streams.ssrcs){
-            sinfo.dinfo.ssrcs.insert(ssrc) ;
+            sinfo.dinfo.ssrcs.push_back(ssrc) ;
         }
     }
     if(sinfo.binfo.stream_type == STREAM_VIDEO){

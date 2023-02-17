@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <set>
+#include <vector>
 #include <tuple>
 
 #include "transport_def.h"
@@ -83,7 +83,7 @@ struct StreamDetailInfo
     StreamDirection direction;
     bool is_rtcpmux=true;
     bool is_rtcp_reduced_size=false;
-    std::set<uint32_t> ssrcs;
+    std::vector<uint32_t> ssrcs;
     std::string cname;
     std::vector<CodecParams> codecs;
 };
