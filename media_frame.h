@@ -40,6 +40,8 @@ public:
         size = o.size;
         o.data = nullptr;
         o.size = 0;
+
+        return *this;
     }
     MediaFrame(MediaFrame&& o){
         *this = std::move(o);

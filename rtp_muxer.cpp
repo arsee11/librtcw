@@ -5,6 +5,7 @@
 #include <api/video_codecs/video_codec.h>
 #include <absl/types/optional.h>
 #include <random>
+#include <iostream>
 
 namespace rtcgw {
 
@@ -45,6 +46,10 @@ RtpMuxerImpl::RtpMuxerImpl(const CodecParams &params, uint32_t ssrc)
 
 void RtpMuxerImpl::put(const MediaFrame &frame)
 {
+    if(_codec_type != webrtc::kVideoCodecVP8){
+        std::cout <<"[RtpMuxer] not supported codec:"<<_codec_type<<std::endl;
+        return;
+    }
     webrtc::RTPVideoHeader vheader;
     vheader.width = frame.w;
     vheader.height = frame.h;
@@ -52,9 +57,9 @@ void RtpMuxerImpl::put(const MediaFrame &frame)
     vheader.frame_type = frame.is_key_frame ?
                 webrtc::VideoFrameType::kVideoFrameKey :
                 webrtc::VideoFrameType::kVideoFrameDelta;
-    webrtc::RTPVideoHeaderVP9 vp9header;
-    vp9header.InitRTPVideoHeaderVP9();
-    vheader.video_type_header = vp9header;
+    webrtc::RTPVideoHeaderVP8 vp8header;
+    vp8header.InitRTPVideoHeaderVP8();
+    vheader.video_type_header = vp8header;
 
     webrtc::RTPFragmentationHeader fragment;
     _packetizer = webrtc::RtpPacketizer::Create(_codec_type,

@@ -16,26 +16,26 @@ static StreamInfo ConverContentInfoToStreamParams(const cricket::ContentInfo& in
     StreamInfo sinfo;
     switch (info.media_description()->type()) {
     case cricket::MediaType::MEDIA_TYPE_AUDIO:
-        sinfo.stream_type = STREAM_AUDIO;
+        sinfo.binfo.stream_type = STREAM_AUDIO;
         break;
     case cricket::MediaType::MEDIA_TYPE_VIDEO:
-        sinfo.stream_type = STREAM_VIDEO;
+        sinfo.binfo.stream_type = STREAM_VIDEO;
         break;
     case cricket::MediaType::MEDIA_TYPE_DATA:
-        sinfo.stream_type = STREAM_DATA;
+        sinfo.binfo.stream_type = STREAM_DATA;
         break;
     default:
-        sinfo.stream_type = -1;
+        sinfo.binfo.stream_type = -1;
     }
-    sinfo.is_rtcpmux = info.media_description()->rtcp_mux();
-    sinfo.is_rtcp_reduced_size = info.media_description()->rtcp_reduced_size();
-    sinfo.direction = (StreamDirection)info.media_description()->direction();
+    sinfo.dinfo.is_rtcpmux = info.media_description()->rtcp_mux();
+    sinfo.dinfo.is_rtcp_reduced_size = info.media_description()->rtcp_reduced_size();
+    sinfo.dinfo.direction = (StreamDirection)info.media_description()->direction();
     for( auto streams : info.media_description()->streams()){
         for(auto ssrc : streams.ssrcs){
-            sinfo.ssrcs.insert(ssrc) ;
+            sinfo.dinfo.ssrcs.insert(ssrc) ;
         }
     }
-    if(sinfo.stream_type == STREAM_VIDEO){
+    if(sinfo.binfo.stream_type == STREAM_VIDEO){
         const cricket::VideoContentDescription* vcodec = info.media_description()->as_video();
         for(auto codec : vcodec->codecs()){
             CodecParams cparam{codec.name, codec.id, CodecType::CODEC_VIDEO,{},{}};
@@ -43,12 +43,12 @@ static StreamInfo ConverContentInfoToStreamParams(const cricket::ContentInfo& in
                 cparam.feedback_params.push_back(rtcgw::FeedbackParam{fbparam.id(), fbparam.param()});
             }
             cparam.fmtps = codec.params;
-            sinfo.codecs.push_back(cparam);
+            sinfo.dinfo.codecs.push_back(cparam);
         }
 
     }
 
-    if(sinfo.stream_type == STREAM_AUDIO){
+    if(sinfo.binfo.stream_type == STREAM_AUDIO){
         const cricket::AudioContentDescription* acodec = info.media_description()->as_audio();
         for(auto codec : acodec->codecs()){
             CodecParams cparam{codec.name, codec.id, CodecType::CODEC_AUDIO,{},{}};
@@ -56,7 +56,7 @@ static StreamInfo ConverContentInfoToStreamParams(const cricket::ContentInfo& in
                 cparam.feedback_params.push_back(rtcgw::FeedbackParam{fbparam.id(), fbparam.param()});
             }
             cparam.fmtps = codec.params;
-            sinfo.codecs.push_back(cparam);
+            sinfo.dinfo.codecs.push_back(cparam);
         }
     }
 
@@ -66,9 +66,9 @@ static StreamInfo ConverContentInfoToStreamParams(const cricket::ContentInfo& in
 static TransportInfo ConverContentInfoToTransportParams(const cricket::ContentInfo& info)
 {
     TransportInfo tinfo;
-    tinfo.is_media = info.media_description()->type()==cricket::MediaType::MEDIA_TYPE_DATA ? false :true;
-    tinfo.is_rtcp_mux = info.media_description()->rtcp_mux();
-    tinfo.mid = info.mid();
+    tinfo.binfo.is_media = info.media_description()->type()==cricket::MediaType::MEDIA_TYPE_DATA ? false :true;
+    tinfo.binfo.is_rtcp_mux = info.media_description()->rtcp_mux();
+    tinfo.binfo.stream_id = info.mid();
 
     if(info.media_description()->cryptos().size() > 0){
         for(auto c : info.media_description()->cryptos()){
@@ -79,16 +79,27 @@ static TransportInfo ConverContentInfoToTransportParams(const cricket::ContentIn
             ci.session_params = c.session_params;
             tinfo.cryptos.push_back(ci);
         }
-        tinfo.policy = TransportPolicy::SRTP;
+        tinfo.binfo.policy = TransportPolicy::SRTP;
     }
 
     return tinfo;
 }
 
-static std::tuple<StreamInfos, TransportInfos> parseSdp(const std::string& sdp)
+static GroupInfos ConvertContentGroupToGroupInfos(const cricket::ContentGroups& groups)
+{
+    GroupInfos ginfos;
+    for( auto g : groups){
+        ginfos.push_back({g.semantics(), g.content_names()});
+    }
+
+    return ginfos;
+}
+
+static std::tuple<GroupInfos, StreamInfos, TransportInfos> parseSdp(const std::string& sdp)
 {
     StreamInfos sinfos;
     TransportInfos tinfos;
+    GroupInfos ginfos;
     webrtc::SdpParseError error;
     std::unique_ptr<webrtc::SessionDescriptionInterface> descinterface =
         webrtc::CreateSessionDescription(webrtc::SdpType::kOffer, sdp, &error);
@@ -96,56 +107,65 @@ static std::tuple<StreamInfos, TransportInfos> parseSdp(const std::string& sdp)
        //LogE() << "Can't parse received session description message. "
        //                   "SdpParseError was: "
        //                << error.description<<std::endl;
-      return std::make_tuple(sinfos, tinfos);
+      return std::make_tuple(ginfos, sinfos, tinfos);
     }
 
     cricket::SessionDescription* desc = descinterface->description();
     for(size_t i=0; i<desc->contents().size(); i++){
         cricket::ContentInfo content = desc->contents()[i];
         StreamInfo sinfo = ConverContentInfoToStreamParams(content);
-        sinfo.id = content.mid();
+        sinfo.binfo.mid = content.mid();
         sinfos.push_back(sinfo);
 
         TransportInfo tinfo = ConverContentInfoToTransportParams(content);
-        tinfo.ice_role = cricket::ICEROLE_CONTROLLED;
-        tinfo.type = TransportType::ICE;       
-        tinfo.remote_ice_ufrag = desc->transport_infos()[i].description.ice_ufrag;
-        tinfo.remote_ice_pwd = desc->transport_infos()[i].description.ice_pwd;
+        tinfo.ice_param.ice_role = cricket::ICEROLE_CONTROLLED;
+        tinfo.binfo.type = TransportType::ICE;
+        tinfo.ice_param.ice_ufrag = desc->transport_infos()[i].description.ice_ufrag;
+        tinfo.ice_param.ice_pwd = desc->transport_infos()[i].description.ice_pwd;
         if(desc->transport_infos()[i].description.identity_fingerprint != nullptr){
-            tinfo.remote_fingerprint_alg = desc->transport_infos()[i].description.identity_fingerprint->algorithm;
-            tinfo.remote_fingerprint = desc->transport_infos()[i].description.identity_fingerprint->GetRfc4572Fingerprint();
-            tinfo.policy = TransportPolicy::DTLS_SRTP;
+            tinfo.fingerprint_param.fingerprint_alg = desc->transport_infos()[i].description.identity_fingerprint->algorithm;
+            tinfo.fingerprint_param.fingerprint = desc->transport_infos()[i].description.identity_fingerprint->GetRfc4572Fingerprint();
+            tinfo.binfo.policy = TransportPolicy::DTLS_SRTP;
         }
 
         tinfos.push_back(tinfo);
     }
+    ginfos = ConvertContentGroupToGroupInfos(desc->groups());
 
-    return std::make_tuple(sinfos, tinfos);
+    return std::make_tuple(ginfos, sinfos, tinfos);
 }
 
-std::string streamInfoToSdp(const StreamInfos& sinfos, const TransportInfos& tinfos)
+std::string streamInfoToSdp(const GroupInfos& ginfos, const StreamInfos& sinfos, const TransportInfos& tinfos)
 {
     std::unique_ptr<cricket::SessionDescription> sdesc = std::make_unique<cricket::SessionDescription>();
 
     sdesc->set_extmap_allow_mixed(true);
     sdesc->set_msid_signaling(cricket::kMsidSignalingSsrcAttribute);
 
+    for(auto g : ginfos){
+        cricket::ContentGroup group(g.group_name);
+        for(auto s : g.streams){
+            group.AddContentName(s);
+        }
+        sdesc->AddGroup(group);
+    }
+
     for(size_t i=0; i<sinfos.size(); i++){
         StreamInfo sinfo = sinfos[i];
         std::string protocol="UDP/TLS/RTP/SAVPF";
-        if(tinfos[i].policy == TransportPolicy::SRTP){
+        if(tinfos[i].binfo.policy == TransportPolicy::SRTP){
             protocol = "RTP/SAVPF";
         }
-        else if(tinfos[i].policy == TransportPolicy::UNENCRYPTED){
+        else if(tinfos[i].binfo.policy == TransportPolicy::UNENCRYPTED){
             protocol = "RTP/AVPF";
         }
         std::unique_ptr<cricket::MediaContentDescription> content;
-        if(sinfo.stream_type == STREAM_AUDIO){
+        if(sinfo.binfo.stream_type == STREAM_AUDIO){
             auto audioc = new cricket::AudioContentDescription();
             content.reset(audioc);
             audioc->set_protocol(protocol);
 
-            for(auto cp: sinfo.codecs){
+            for(auto cp: sinfo.dinfo.codecs){
                 cricket::AudioCodec c;
                 c.id = cp.payload_type;
                 c.name = cp.name;
@@ -156,11 +176,11 @@ std::string streamInfoToSdp(const StreamInfos& sinfos, const TransportInfos& tin
                 audioc->AddCodec(c);
             }
         }
-        else if(sinfo.stream_type == STREAM_VIDEO){
+        else if(sinfo.binfo.stream_type == STREAM_VIDEO){
             auto videoc = new cricket::VideoContentDescription();
             content.reset(videoc);
             videoc->set_protocol(protocol);
-            for(auto cp: sinfo.codecs){
+            for(auto cp: sinfo.dinfo.codecs){
                 cricket::VideoCodec c;
                 c.id = cp.payload_type;
                 c.name = cp.name;
@@ -177,35 +197,37 @@ std::string streamInfoToSdp(const StreamInfos& sinfos, const TransportInfos& tin
         if(content != nullptr){
             cricket::RtpHeaderExtensions rhext;
             content->set_rtp_header_extensions(rhext);
-            content->set_rtcp_mux(sinfo.is_rtcpmux);
-            content->set_rtcp_reduced_size(sinfo.is_rtcp_reduced_size);
+            content->set_rtcp_mux(sinfo.dinfo.is_rtcpmux);
+            content->set_rtcp_reduced_size(sinfo.dinfo.is_rtcp_reduced_size);
             content->set_rtcp_reduced_size(false);
             content->set_remote_estimate(false);
-            if(tinfos[i].policy == TransportPolicy::SRTP){
+            if(tinfos[i].binfo.policy == TransportPolicy::SRTP){
                 cricket::CryptoParams crypto;
                 content->AddCrypto(crypto);
             }
-            content->set_direction((webrtc::RtpTransceiverDirection)sinfo.direction);
+            content->set_direction((webrtc::RtpTransceiverDirection)sinfo.dinfo.direction);
             cricket::StreamParams sp;
-            for(auto issrc : sinfo.ssrcs){
+            for(auto issrc : sinfo.dinfo.ssrcs){
                 sp.add_ssrc(issrc);
             }
-            sp.cname = sinfo.cname;
-            sp.id = sinfo.id;
+            sp.cname = sinfo.dinfo.cname;
+            sp.id = sinfo.binfo.mid;
             content->AddStream(sp);
-            sdesc->AddContent(sinfo.id
+            sdesc->AddContent(sinfo.binfo.mid
                              ,cricket::MediaProtocolType::kRtp
                              ,std::move(content));
 
         }
         TransportInfo tinfo = tinfos[i];
         cricket::TransportInfo trans_info;
-        trans_info.description.ice_ufrag = tinfo.local_ice_ufrag;
-        trans_info.description.ice_pwd = tinfo.local_ice_pwd;
-        trans_info.content_name = tinfo.mid;
+        trans_info.description.ice_ufrag = tinfo.ice_param.ice_ufrag;
+        trans_info.description.ice_pwd = tinfo.ice_param.ice_pwd;
+        trans_info.content_name = tinfo.binfo.stream_id;
         trans_info.description.transport_options.push_back("trickle");
-        trans_info.description.identity_fingerprint;
-                rtc::SSLFingerprint::CreateFromRfc4572(tinfo.remote_fingerprint_alg, tinfo.remote_fingerprint);
+        trans_info.description.identity_fingerprint.reset(
+                rtc::SSLFingerprint::CreateFromRfc4572(
+                         tinfo.fingerprint_param.fingerprint_alg,
+                         tinfo.fingerprint_param.fingerprint));
         sdesc->AddTransportInfo(trans_info);
 
     }
@@ -221,13 +243,13 @@ std::string streamInfoToSdp(const StreamInfos& sinfos, const TransportInfos& tin
 MediaInfo parseSdp2MeidaInfo(const std::string &sdpstr)
 {
     MediaInfo minfo;
-    std::tie(minfo.sinfos, minfo.tinfos) = parseSdp(sdpstr);
+    std::tie(minfo.groups, minfo.sinfos, minfo.tinfos) = parseSdp(sdpstr);
     return minfo;
 }
 
 std::string convertMeidaInfo2Sdp(const MediaInfo &minfo)
 {
-    return streamInfoToSdp(minfo.sinfos, minfo.tinfos);
+    return streamInfoToSdp(minfo.groups, minfo.sinfos, minfo.tinfos);
 }
 
 }//rtcw

@@ -61,30 +61,48 @@ struct EndpointInfo
     std::string stream_id;
 };
 
-struct TransportInfo
+struct IceParam
 {
+    int ice_role; //enum{ICEROLE_CONTROLLING = 0, ICEROLE_CONTROLLED, ICEROLE_UNKNOWN};
+    std::string ice_ufrag;
+    std::string ice_pwd;
+    std::string ice_options;
+};
+
+struct FingerPrintParam
+{
+    std::string fingerprint_alg;//RFC4572 fingerprint
+    std::string fingerprint;    //RFC4572 fingerprint
+};
+
+using transport_id_t = std::string;
+
+struct TransportBaseInfo
+{
+    transport_id_t id; // transport id
+    std::string stream_id;
     TransportPolicy policy=UNENCRYPTED;
     bool is_media=true;  //is media or data
     TransportType type=TransportType::ICE;    //use ice or not
     bool is_rtcp_mux=true;
+};
+
+struct TransportInfo
+{
+    TransportBaseInfo binfo;
     bool use_datagram_transport=false;
     bool use_datagram_transport_for_data_channels=false;
+
     bool enable_external_auth=false;
     bool active_reset_srtp_params=false;
-
-    int ice_role; //enum{ICEROLE_CONTROLLING = 0, ICEROLE_CONTROLLED, ICEROLE_UNKNOWN};
     std::vector<CryptoInfo> cryptos; //SRTP config
-    std::string mid;
-    std::string local_ice_ufrag;
-    std::string local_ice_pwd;
-    std::string remote_ice_ufrag;
-    std::string remote_ice_pwd;
-    std::string ice_options;
-    std::string remote_fingerprint_alg;//RFC4572 fingerprint
-    std::string remote_fingerprint;    //RFC4572 fingerprint
+
+    IceParam ice_param;
+    FingerPrintParam fingerprint_param;//RFC4572 fingerprint
 
 };
 
+using TransportBaseInfos = std::vector<TransportBaseInfo>;
 using TransportInfos = std::vector<TransportInfo>;
 
 }

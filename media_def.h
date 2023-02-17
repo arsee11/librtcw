@@ -69,16 +69,29 @@ enum class StreamDirection {
 
 using stream_id_t = std::string;
 
-struct StreamInfo
+struct  StreamBaseInfo
 {
     stream_id_t id;
+    std::string mid;//sdp mid
     int stream_type;
+    std::string source_tag;
+    std::string sink_tag;
+};
+
+struct StreamDetailInfo
+{
     StreamDirection direction;
-    bool is_rtcpmux=false;
+    bool is_rtcpmux=true;
     bool is_rtcp_reduced_size=false;
     std::set<uint32_t> ssrcs;
     std::string cname;
     std::vector<CodecParams> codecs;
+};
+
+struct StreamInfo
+{
+    StreamBaseInfo binfo;
+    StreamDetailInfo dinfo;
 };
 
 using StreamInfos = std::vector<StreamInfo>;
@@ -89,8 +102,16 @@ struct StreamStatistics
 
 };
 
+struct GroupInfo{
+    std::string group_name;
+    std::vector<std::string> streams;
+};
+
+using GroupInfos = std::vector<GroupInfo>;
+
 struct MediaInfo
 {
+    GroupInfos groups;
     StreamInfos sinfos;
     TransportInfos tinfos;
 };

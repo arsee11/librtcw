@@ -66,12 +66,18 @@ void RtpDemuxerImpl::put(const webrtc::RtpPacket &packet)
         }
 
         _buffer.fragments.push_back(parsed_payload->video_payload);
-        if(parsed_payload->video_header.codec = webrtc::VideoCodecType::kVideoCodecVP9){
-            webrtc::RTPVideoHeaderVP9 vp9header = std::get<webrtc::RTPVideoHeaderVP9>(parsed_payload->video_header.video_type_header);
-            //cout<<"is end of frame:"<<vp9header.end_of_frame<<endl;
-            if(vp9header.end_of_frame){
-                _buffer.is_completed = true;
-            }
+//        if(parsed_payload->video_header.codec = webrtc::VideoCodecType::kVideoCodecVP9){
+//            webrtc::RTPVideoHeaderVP9 vp9header = std::get<webrtc::RTPVideoHeaderVP9>(parsed_payload->video_header.video_type_header);
+//            if(vp9header.end_of_frame){
+//                _buffer.is_completed = true;
+//            }
+//        }
+        if(parsed_payload->video_header.codec = webrtc::VideoCodecType::kVideoCodecVP8){
+            webrtc::RTPVideoHeaderVP8 vp8header = std::get<webrtc::RTPVideoHeaderVP8>(parsed_payload->video_header.video_type_header);
+                _buffer.is_completed = packet.Marker();
+        }
+        else{
+            cout<<"[RtpDemuxer] not support codec:"<<parsed_payload->video_header.codec<<endl;
         }
     }
 }
