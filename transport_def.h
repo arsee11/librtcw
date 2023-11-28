@@ -59,6 +59,7 @@ struct EndpointInfo
     TransportType type;
     std::string specify_info;
     std::string stream_id;
+    bool is_finished;
 };
 
 struct IceParam
