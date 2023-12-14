@@ -53,12 +53,20 @@ struct CodecParams
     std::string name;
     int payload_type;
     CodecType codec_type;
+    int clockrate;
+    int channels;
+    int bitrate;
     CodecParameterMap fmtps;
     std::vector<FeedbackParam> feedback_params;
 };
 
-bool operator==(const CodecParams& lhs, const CodecParams& rhs);
-
+inline bool operator==(const CodecParams &lhs, const CodecParams &rhs)
+{
+    return (  lhs.name == rhs.name
+            &&lhs.codec_type == rhs.codec_type
+            &&lhs.payload_type == rhs.payload_type
+            );
+}
 enum class StreamDirection {
   SENDRECV,
   SENDONLY,
@@ -74,9 +82,12 @@ struct  StreamBaseInfo
     stream_id_t id;
     std::string mid;//sdp mid
     int stream_type;
-    std::string source_tag;
-    std::string sink_tag;
 };
+
+inline bool operator==(const StreamBaseInfo& lhs, const StreamBaseInfo& rhs)
+{
+    return lhs.id == rhs.id;
+}
 
 struct StreamDetailInfo
 {
@@ -93,6 +104,11 @@ struct StreamInfo
     StreamBaseInfo binfo;
     StreamDetailInfo dinfo;
 };
+
+inline bool operator==(const StreamInfo& lhs, const StreamInfo& rhs)
+{
+    return lhs.binfo.id == rhs.binfo.id;
+}
 
 using StreamInfos = std::vector<StreamInfo>;
 

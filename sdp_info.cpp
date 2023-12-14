@@ -37,9 +37,13 @@ static StreamInfo ConverContentInfoToStreamParams(const cricket::ContentInfo& in
     }
     if(sinfo.binfo.stream_type == STREAM_VIDEO){
         const cricket::VideoContentDescription* vcodec = info.media_description()->as_video();
-        for(auto codec : vcodec->codecs()){
-            CodecParams cparam{codec.name, codec.id, CodecType::CODEC_VIDEO,{},{}};
-            for(auto fbparam : codec.feedback_params.params()){
+        for(const auto& codec : vcodec->codecs()){
+            CodecParams cparam;
+            cparam.name = codec.name;
+            cparam.payload_type = codec.id;
+            cparam.codec_type = CodecType::CODEC_VIDEO;
+            cparam.clockrate = codec.clockrate;
+            for(const auto& fbparam : codec.feedback_params.params()){
                 cparam.feedback_params.push_back(rtcgw::FeedbackParam{fbparam.id(), fbparam.param()});
             }
             cparam.fmtps = codec.params;
@@ -50,9 +54,15 @@ static StreamInfo ConverContentInfoToStreamParams(const cricket::ContentInfo& in
 
     if(sinfo.binfo.stream_type == STREAM_AUDIO){
         const cricket::AudioContentDescription* acodec = info.media_description()->as_audio();
-        for(auto codec : acodec->codecs()){
-            CodecParams cparam{codec.name, codec.id, CodecType::CODEC_AUDIO,{},{}};
-            for(auto fbparam : codec.feedback_params.params()){
+        for(const auto& codec : acodec->codecs()){
+            CodecParams cparam;
+            cparam.name = codec.name;
+            cparam.payload_type = codec.id;
+            cparam.codec_type = CodecType::CODEC_AUDIO;
+            cparam.clockrate = codec.clockrate;
+            cparam.channels = codec.channels;
+            cparam.bitrate = codec.bitrate;
+            for(const auto& fbparam : codec.feedback_params.params()){
                 cparam.feedback_params.push_back(rtcgw::FeedbackParam{fbparam.id(), fbparam.param()});
             }
             cparam.fmtps = codec.params;
@@ -71,7 +81,7 @@ static TransportInfo ConverContentInfoToTransportParams(const cricket::ContentIn
     tinfo.binfo.stream_id = info.mid();
 
     if(info.media_description()->cryptos().size() > 0){
-        for(auto c : info.media_description()->cryptos()){
+        for(const auto& c : info.media_description()->cryptos()){
             CryptoInfo ci;
             ci.tag = c.tag;
             ci.cipher_suite = c.cipher_suite;
@@ -88,7 +98,7 @@ static TransportInfo ConverContentInfoToTransportParams(const cricket::ContentIn
 static GroupInfos ConvertContentGroupToGroupInfos(const cricket::ContentGroups& groups)
 {
     GroupInfos ginfos;
-    for( auto g : groups){
+    for(const auto& g : groups){
         ginfos.push_back({g.semantics(), g.content_names()});
     }
 
@@ -142,9 +152,9 @@ std::string streamInfoToSdp(const GroupInfos& ginfos, const StreamInfos& sinfos,
     sdesc->set_extmap_allow_mixed(true);
     sdesc->set_msid_signaling(cricket::kMsidSignalingSsrcAttribute);
 
-    for(auto g : ginfos){
+    for(const auto& g : ginfos){
         cricket::ContentGroup group(g.group_name);
-        for(auto s : g.streams){
+        for(const auto& s : g.streams){
             group.AddContentName(s);
         }
         sdesc->AddGroup(group);
@@ -165,11 +175,14 @@ std::string streamInfoToSdp(const GroupInfos& ginfos, const StreamInfos& sinfos,
             content.reset(audioc);
             audioc->set_protocol(protocol);
 
-            for(auto cp: sinfo.dinfo.codecs){
+            for(const auto& cp: sinfo.dinfo.codecs){
                 cricket::AudioCodec c;
                 c.id = cp.payload_type;
                 c.name = cp.name;
-                for(auto fbparam : cp.feedback_params){
+                c.clockrate = cp.clockrate;
+                c.channels = cp.channels;
+                c.bitrate = cp.bitrate;
+                for(const auto& fbparam : cp.feedback_params){
                     c.feedback_params.Add( {fbparam.id, fbparam.param} );
                 }
                 c.params = cp.fmtps;
@@ -180,11 +193,11 @@ std::string streamInfoToSdp(const GroupInfos& ginfos, const StreamInfos& sinfos,
             auto videoc = new cricket::VideoContentDescription();
             content.reset(videoc);
             videoc->set_protocol(protocol);
-            for(auto cp: sinfo.dinfo.codecs){
+            for(const auto& cp: sinfo.dinfo.codecs){
                 cricket::VideoCodec c;
                 c.id = cp.payload_type;
                 c.name = cp.name;
-                for(auto fbparam : cp.feedback_params){
+                for(const auto& fbparam : cp.feedback_params){
                     c.feedback_params.Add( {fbparam.id, fbparam.param} );
                 }
                 c.params = cp.fmtps;
