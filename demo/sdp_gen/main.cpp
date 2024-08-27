@@ -37,6 +37,10 @@ void addMediaInfo(int media_type, rtcgw::MediaInfo& minfo)
         tinfo.binfo.type = rtcgw::TransportType::ICE;
         tinfo.ice_param.ice_role = 0;//controlling
         tinfo.binfo.stream_id = sinfo.binfo.mid;
+        tinfo.ice_param.ice_role = 0;
+        tinfo.ice_param.ice_ufrag ="test";
+        tinfo.ice_param.ice_pwd = "test123";
+        tinfo.binfo.policy = rtcgw::DTLS_SRTP;
         minfo.tinfos.push_back(tinfo);
     }
 }
