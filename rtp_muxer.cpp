@@ -61,12 +61,12 @@ void RtpMuxerImpl::put(const MediaFrame &frame)
     vp8header.InitRTPVideoHeaderVP8();
     vheader.video_type_header = vp8header;
 
-    webrtc::RTPFragmentationHeader fragment;
+    bool enable_av1_even_split = false;
     _packetizer = webrtc::RtpPacketizer::Create(_codec_type,
             rtc::ArrayView<const uint8_t>(static_cast<const uint8_t*>(frame.data), frame.size),
             webrtc::RtpPacketizer::PayloadSizeLimits(),
             vheader,
-            &fragment);
+            enable_av1_even_split);
 
     _fps = frame.fps;
 }

@@ -54,7 +54,6 @@ std::unique_ptr<T> WrapUnique(T* ptr) {
   static_assert(std::is_object<T>::value, "non-object types are unsupported");
   return std::unique_ptr<T>(ptr);
 }
-
 }
 
 #endif/*ABSL_INCLUDE_H*/

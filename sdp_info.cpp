@@ -80,17 +80,17 @@ static TransportInfo ConverContentInfoToTransportParams(const cricket::ContentIn
     tinfo.binfo.is_rtcp_mux = info.media_description()->rtcp_mux();
     tinfo.binfo.stream_id = info.mid();
 
-    if(info.media_description()->cryptos().size() > 0){
-        for(const auto& c : info.media_description()->cryptos()){
-            CryptoInfo ci;
-            ci.tag = c.tag;
-            ci.cipher_suite = c.cipher_suite;
-            ci.key_params = c.key_params;
-            ci.session_params = c.session_params;
-            tinfo.cryptos.push_back(ci);
-        }
-        tinfo.binfo.policy = TransportPolicy::SRTP;
-    }
+    // if(info.media_description()->cryptos().size() > 0){
+    //     for(const auto& c : info.media_description()->cryptos()){
+    //         CryptoInfo ci;
+    //         ci.tag = c.tag;
+    //         ci.cipher_suite = c.cipher_suite;
+    //         ci.key_params = c.key_params;
+    //         ci.session_params = c.session_params;
+    //         tinfo.cryptos.push_back(ci);
+    //     }
+    //     tinfo.binfo.policy = TransportPolicy::SRTP;
+    // }
 
     return tinfo;
 }
@@ -176,11 +176,10 @@ std::string streamInfoToSdp(const GroupInfos& ginfos, const StreamInfos& sinfos,
             audioc->set_protocol(protocol);
 
             for(const auto& cp: sinfo.dinfo.codecs){
-                cricket::AudioCodec c;
-                c.id = cp.payload_type;
-                c.name = cp.name;
-                c.clockrate = cp.clockrate;
-                c.channels = cp.channels;
+                cricket::Codec c = cricket::CreateAudioCodec(cp.payload_type,
+                    cp.name,
+                    cp.clockrate,
+                    cp.channels);
                 c.bitrate = cp.bitrate;
                 for(const auto& fbparam : cp.feedback_params){
                     c.feedback_params.Add( {fbparam.id, fbparam.param} );
@@ -194,9 +193,8 @@ std::string streamInfoToSdp(const GroupInfos& ginfos, const StreamInfos& sinfos,
             content.reset(videoc);
             videoc->set_protocol(protocol);
             for(const auto& cp: sinfo.dinfo.codecs){
-                cricket::VideoCodec c;
-                c.id = cp.payload_type;
-                c.name = cp.name;
+                cricket::Codec c = cricket::CreateVideoCodec(cp.payload_type,
+                cp.name);
                 for(const auto& fbparam : cp.feedback_params){
                     c.feedback_params.Add( {fbparam.id, fbparam.param} );
                 }
@@ -214,10 +212,10 @@ std::string streamInfoToSdp(const GroupInfos& ginfos, const StreamInfos& sinfos,
             content->set_rtcp_reduced_size(sinfo.dinfo.is_rtcp_reduced_size);
             content->set_rtcp_reduced_size(false);
             content->set_remote_estimate(false);
-            if(tinfos[i].binfo.policy == TransportPolicy::SRTP){
-                cricket::CryptoParams crypto;
-                content->AddCrypto(crypto);
-            }
+            // if(tinfos[i].binfo.policy == TransportPolicy::SRTP){
+            //     cricket::CryptoParams crypto;
+            //     content->AddCrypto(crypto);
+            // }
             content->set_direction((webrtc::RtpTransceiverDirection)sinfo.dinfo.direction);
             cricket::StreamParams sp;
             for(auto issrc : sinfo.dinfo.ssrcs){
