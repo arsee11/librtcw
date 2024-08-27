@@ -1,3 +1,0 @@
-/home/cl/libs/librtcw/webrtc_deps/webrtc/rtc_base/build/CMakeFiles/edit_cache.dir
-/home/cl/libs/librtcw/webrtc_deps/webrtc/rtc_base/build/CMakeFiles/rtc_base.dir
-/home/cl/libs/librtcw/webrtc_deps/webrtc/rtc_base/build/CMakeFiles/rebuild_cache.dir
