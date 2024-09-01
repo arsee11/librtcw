@@ -52,7 +52,6 @@ target_link_libraries(${PROJECT_NAME}
     webrtc_p2p
     webrtc_pc
     webrtc_system_wrappers
-    srtp2
     -Wl,--no-whole-archive
 )
 
