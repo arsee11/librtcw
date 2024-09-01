@@ -1,9 +1,6 @@
 [submodule "webrtc_deps/webrtc"]
 	path = webrtc_deps/webrtc
 	url = https://webrtc.googlesource.com/src
-[submodule "webrtc_deps/third_party/libsrtp"]
-	path = webrtc_deps/third_party/libsrtp
-	url = https://github.com/cisco/libsrtp.git
 [submodule "webrtc_deps/third_party/libyuv"]
 	path = webrtc_deps/third_party/libyuv
 	url = https://chromium.googlesource.com/libyuv/libyuv
