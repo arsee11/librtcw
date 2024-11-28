@@ -6,6 +6,7 @@
 #include <map>
 #include <vector>
 #include <tuple>
+#include <cstdint>
 
 #include "transport_def.h"
 
