@@ -3,6 +3,9 @@ cmake_minimum_required(VERSION 3.5)
 ####################################################################
 project(webrtc_deps)
 
+add_subdirectory(third_party/libsrtp)
+add_subdirectory(third_party/libyuv)
+
 set(SRCS
   #pc/jsep_session_description.cc
   #pc/webrtc_sdp.cc
@@ -423,4 +426,3 @@ add_library(${PROJECT_NAME} STATIC ${BASE_SRCS})
 
 ####################################################################
 
-#add_subdirectory(third_party/libsrtp)
