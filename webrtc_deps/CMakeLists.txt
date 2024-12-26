@@ -10,7 +10,7 @@ set(SRCS
   #pc/jsep_session_description.cc
   #pc/webrtc_sdp.cc
   #pc/media_session.cc
-  absl_inl/absl/strings/ascii.cc
+  absl_inl/absl/absl/strings/ascii.cc
 )
 
 add_library(${PROJECT_NAME} STATIC ${SRCS})
@@ -27,8 +27,8 @@ set(P2P_SRCS
   webrtc/p2p/base/connection.cc
   webrtc/p2p/base/connection_info.cc
   webrtc/p2p/base/default_ice_transport_factory.cc
-  webrtc/p2p/base/dtls_transport.cc
-  webrtc/p2p/base/dtls_transport_internal.cc
+  webrtc/p2p/dtls/dtls_transport.cc
+  webrtc/p2p/dtls/dtls_transport_internal.cc
   webrtc/p2p/base/ice_controller_interface.cc
   webrtc/p2p/base/ice_credentials_iterator.cc
   webrtc/p2p/base/ice_switch_reason.cc

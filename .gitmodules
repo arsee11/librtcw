@@ -7,3 +7,6 @@
 [submodule "webrtc_deps/third_party/libsrtp"]
 	path = webrtc_deps/third_party/libsrtp
 	url = https://github.com/cisco/libsrtp.git
+[submodule "webrtc_deps/absl_inl/absl"]
+	path = webrtc_deps/absl_inl/absl
+	url = https://github.com/abseil/abseil-cpp.git
