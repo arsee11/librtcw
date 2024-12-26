@@ -9,22 +9,27 @@ set(CMAKE_CXX_FLAGS " --std=c++20 -fPIC -g ${CMAKE_CXX_FLAGS}")
 set(CMAKE_C_FLAGS " -fPIC -g ${CMAKE_C_FLAGS}")
 
 
+find_package(PkgConfig)
+pkg_search_module(WEBRTC REQUIRED webrtc_more)
+message("webrtc_more found dir:${WEBRTC_INCLUDE_DIRS}")
+include_directories(  ${WEBRTC_INCLUDE_DIRS} )
+
 add_definitions(-D WEBRTC_POSIX)
 add_definitions(-D WEBRTC_USE_EPOLL)
 add_definitions(-D WEBRTC_LINUX)
 
-include_directories(webrtc_deps/)
-include_directories(webrtc_deps/absl_inl/absl)
-include_directories(webrtc_deps/webrtc)
-include_directories(webrtc_deps/third_party/libyuv/include)
-include_directories(webrtc_deps/third_party/libsrtp/include)
-include_directories(webrtc_deps/third_party/libsrtp/crypto/include)
+include_directories(${WEBRTC_INCLUDE_DIRS}/)
+include_directories(${WEBRTC_INCLUDE_DIRS}/absl_inl/absl)
+include_directories(${WEBRTC_INCLUDE_DIRS}/webrtc)
+include_directories(${WEBRTC_INCLUDE_DIRS}/third_party/libyuv/include)
+include_directories(${WEBRTC_INCLUDE_DIRS}/third_party/libsrtp/include)
+include_directories(${WEBRTC_INCLUDE_DIRS}/third_party/libsrtp/crypto/include)
 
 include_directories(${PROJECT_SOURCE_DIR})
 include_directories(../)
 
-link_directories(webrtc_deps/third_party/libyuv)
-link_directories(webrtc_deps/third_party/libsrtp)
+link_directories(${WEBRTC_INCLUDE_DIRS} /third_party/libyuv)
+link_directories(${WEBRTC_INCLUDE_DIRS} /third_party/libsrtp)
 
 
 add_subdirectory(webrtc_deps/)
@@ -54,5 +59,11 @@ target_link_libraries(${PROJECT_NAME}
     webrtc_system_wrappers
     -Wl,--no-whole-archive
 )
+add_custom_command(
+     TARGET ${PROJECT_NAME} POST_BUILD
+     COMMAND cp ${WEBRTC_INCLUDE_DIRS}/third_party/libsrtp/libsrtp2.a ${LIBRARY_OUTPUT_PATH}
+     COMMAND cp ${WEBRTC_INCLUDE_DIRS}/third_party/libyuv/build/libyuv.a ${LIBRARY_OUTPUT_PATH}   
+     VERBATIM)
+
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE LIBRTCW_LIBRARY)
