@@ -16,6 +16,8 @@ include_directories(../../webrtc_deps/webrtc)
 include_directories(../../)
 
 link_directories(../../lib)
+link_directories(../../webrtc_deps/third_party/libyuv)
+link_directories(../../webrtc_deps/third_party/libsrtp)
 
 add_executable(${PROJECT_NAME} 
     main.cpp
@@ -25,5 +27,6 @@ target_link_libraries(${PROJECT_NAME}
     rtcw
     ssl
     crypto
+    srtp2
     yuv
 )

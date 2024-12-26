@@ -347,6 +347,7 @@ set(BASE_SRCS
   webrtc/rtc_base/openssl_utility.cc
   webrtc/rtc_base/openssl_adapter.cc
   webrtc/rtc_base/openssl_session_cache.cc
+  # webrtc/rtc_base/socket_server.cc
   webrtc/rtc_base/system_time.cc
   webrtc/rtc_base/synchronization/yield_policy.cc
   webrtc/rtc_base/synchronization/sequence_checker_internal.cc
