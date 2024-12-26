@@ -14,7 +14,7 @@ add_definitions(-D WEBRTC_USE_EPOLL)
 add_definitions(-D WEBRTC_LINUX)
 
 include_directories(webrtc_deps/)
-include_directories(webrtc_deps/absl_inl)
+include_directories(webrtc_deps/absl_inl/absl)
 include_directories(webrtc_deps/webrtc)
 include_directories(webrtc_deps/third_party/libyuv/include)
 include_directories(webrtc_deps/third_party/libsrtp/include)
