@@ -3,11 +3,26 @@ cmake_minimum_required(VERSION 3.5)
 ####################################################################
 project(webrtc_deps)
 
+set(ABSL_DIR ${WEBRTC_INCLUDE_DIRS}/absl_inl/absl/absl)
 set(SRCS
-  #pc/jsep_session_description.cc
-  #pc/webrtc_sdp.cc
-  #pc/media_session.cc
-  ${WEBRTC_INCLUDE_DIRS}/absl_inl/absl/absl/strings/ascii.cc
+  ${ABSL_DIR}/numeric/int128.cc
+  ${ABSL_DIR}/base/internal/throw_delegate.cc
+  ${ABSL_DIR}/base/internal/raw_logging.cc
+  ${ABSL_DIR}/strings/ascii.cc
+  ${ABSL_DIR}/strings/charconv.cc
+  ${ABSL_DIR}/strings/match.cc
+  ${ABSL_DIR}/strings/numbers.cc
+  ${ABSL_DIR}/strings/str_cat.cc
+  ${ABSL_DIR}/strings/internal/charconv_bigint.cc
+  ${ABSL_DIR}/strings/internal/charconv_parse.cc
+  ${ABSL_DIR}/strings/internal/memutil.cc
+  ${ABSL_DIR}/strings/internal/str_format/arg.cc
+  ${ABSL_DIR}/strings/internal/str_format/bind.cc
+  ${ABSL_DIR}/strings/internal/str_format/extension.cc
+  ${ABSL_DIR}/strings/internal/str_format/float_conversion.cc
+  ${ABSL_DIR}/strings/internal/str_format/output.cc
+  ${ABSL_DIR}/strings/internal/str_format/parser.cc
+  ${ABSL_DIR}/strings/internal/stringify_sink.cc
 )
 
 add_library(${PROJECT_NAME} STATIC ${SRCS})
@@ -26,6 +41,7 @@ set(P2P_SRCS
   ${WEBRTC_INCLUDE_DIRS}/webrtc/p2p/base/default_ice_transport_factory.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/p2p/dtls/dtls_transport.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/p2p/dtls/dtls_transport_internal.cc
+  ${WEBRTC_INCLUDE_DIRS}/webrtc/p2p/dtls/dtls_utils.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/p2p/base/ice_controller_interface.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/p2p/base/ice_credentials_iterator.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/p2p/base/ice_switch_reason.cc
@@ -112,11 +128,13 @@ set(API_SRCS
   ${WEBRTC_INCLUDE_DIRS}/webrtc/api/rtp_packet_info.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/api/audio_options.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/api/rtc_event_log/rtc_event.cc
+  ${WEBRTC_INCLUDE_DIRS}/webrtc/api/rtc_event_log/rtc_event_log.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/api/rtp_headers.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/api/units/timestamp.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/api/units/time_delta.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/api/task_queue/task_queue_base.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/api/task_queue/pending_task_safety_flag.cc
+  ${WEBRTC_INCLUDE_DIRS}/webrtc/api/task_queue/default_task_queue_factory_stdlib.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/api/transport/network_types.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/api/transport/stun.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/api/transport/field_trial_based_config.cc
@@ -128,6 +146,7 @@ set(API_SRCS
   ${WEBRTC_INCLUDE_DIRS}/webrtc/api/jsep_ice_candidate.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/api/audio_codecs/audio_format.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/api/call/transport.cc
+  ${WEBRTC_INCLUDE_DIRS}/webrtc/api/environment/environment_factory.cc
 )
 add_library(${PROJECT_NAME} STATIC ${API_SRCS})
 
@@ -146,6 +165,8 @@ set(COMMON_SRCS
   ${WEBRTC_INCLUDE_DIRS}/webrtc/common_video//h264/sps_vui_rewriter.cc
 
   ${WEBRTC_INCLUDE_DIRS}/webrtc/media/base/codec.cc
+  ${WEBRTC_INCLUDE_DIRS}/webrtc/media/base/codec_comparators.cc
+  ${WEBRTC_INCLUDE_DIRS}/webrtc/media/base/codec_list.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/media/base/media_constants.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/media/base/rid_description.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/media/base/rtp_utils.cc
@@ -153,6 +174,7 @@ set(COMMON_SRCS
   ${WEBRTC_INCLUDE_DIRS}/webrtc/media/base/sdp_video_format_utils.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/media/base/turn_utils.cc
 
+  ${WEBRTC_INCLUDE_DIRS}/webrtc/common_video/corruption_detection_converters.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/common_video/generic_frame_descriptor/generic_frame_info.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/common_video/h264/h264_bitstream_parser.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/common_video/h264/h264_common.cc
@@ -180,8 +202,9 @@ set(MODULES_SRCS
   ${WEBRTC_INCLUDE_DIRS}/webrtc/modules/rtp_rtcp/include/rtp_rtcp_defines.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/modules/rtp_rtcp/source/absolute_capture_time_interpolator.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/modules/rtp_rtcp/source/absolute_capture_time_sender.cc
-  ${WEBRTC_INCLUDE_DIRS}/webrtc/modules/rtp_rtcp/source/create_video_rtp_depacketizer.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/modules/rtp_rtcp/source/active_decode_targets_helper.cc
+  ${WEBRTC_INCLUDE_DIRS}/webrtc/modules/rtp_rtcp/source/corruption_detection_extension.cc
+  ${WEBRTC_INCLUDE_DIRS}/webrtc/modules/rtp_rtcp/source/create_video_rtp_depacketizer.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/modules/rtp_rtcp/source/dtmf_queue.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/modules/rtp_rtcp/source/fec_private_tables_bursty.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/modules/rtp_rtcp/source/fec_private_tables_random.cc
@@ -404,6 +427,7 @@ set(BASE_SRCS
   ${WEBRTC_INCLUDE_DIRS}/webrtc/rtc_base/ifaddrs_converter.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/rtc_base/crc32.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/rtc_base/zero_memory.cc
+  ${WEBRTC_INCLUDE_DIRS}/webrtc/rtc_base/task_queue_stdlib.cc
 
   ${WEBRTC_INCLUDE_DIRS}/webrtc/rtc_base/experiments/struct_parameters_parser.cc
   ${WEBRTC_INCLUDE_DIRS}/webrtc/rtc_base/experiments/field_trial_parser.cc
