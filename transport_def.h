@@ -54,6 +54,14 @@ enum TransportType
     TCP
 };
 
+enum class TransportState{
+    INIT,
+    CONNECTING,
+    COMPLETED,
+    FAILED,
+    CLOSED
+};
+
 struct EndpointInfo
 {
     TransportType type;
